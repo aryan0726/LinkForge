@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.List;   // <-- ADD THIS
 
 @RestController
 @RequestMapping("/api/links")
@@ -31,5 +32,10 @@ public class LinkController {
             throws IOException {
 
         linkService.redirect(shortCode, response);
+    }
+
+    @GetMapping
+    public List<LinkResponse> getMyLinks() {
+        return linkService.getAllLinks();
     }
 }

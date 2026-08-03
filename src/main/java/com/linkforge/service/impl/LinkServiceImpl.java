@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -72,5 +73,27 @@ public class LinkServiceImpl implements LinkService {
         linkRepository.save(link);
 
         response.sendRedirect(link.getOriginalUrl());
+    }
+
+    @Override
+    public List<LinkResponse> getAllLinks() {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return linkRepository.findByUser(user)
+                .stream()
+                .map(link -> LinkResponse.builder()
+                        .originalUrl(link.getOriginalUrl())
+                        .shortCode(link.getShortCode())
+                        .shortUrl("http://localhost:8080/" + link.getShortCode())
+                        .clickCount(link.getClickCount())
+                        .build())
+                .toList();
     }
 }
