@@ -1,14 +1,19 @@
 # LinkForge Backend Progress
 
-## Completed
+## ✅ Completed
 
 - Spring Boot Setup
 - PostgreSQL Integration
 - JWT Authentication
-- User Registration
-- User Login
+- Register API
+- Login API
 - Protected APIs
+- Create Short URL API
 
-## Current
+## 🚧 Next
 
-- URL Shortener Engine
+- Redirect API
+- My Links API
+- Delete Link
+- Update Link
+- Analytics

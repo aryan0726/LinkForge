@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface LinkRepository extends JpaRepository<Link, UUID> {
 
     Optional<Link> findByShortCode(String shortCode);
+
+    Optional<Link> findByShortCodeAndActiveTrue(String shortCode);
 }

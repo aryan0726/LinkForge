@@ -8,10 +8,13 @@ import com.linkforge.repository.LinkRepository;
 import com.linkforge.repository.UserRepository;
 import com.linkforge.service.interfaces.LinkService;
 import com.linkforge.util.ShortCodeGenerator;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +32,7 @@ public class LinkServiceImpl implements LinkService {
         String email = authentication.getName();
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow();
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         String shortCode;
 
@@ -49,9 +52,25 @@ public class LinkServiceImpl implements LinkService {
 
         return LinkResponse.builder()
                 .originalUrl(link.getOriginalUrl())
-                .shortCode(shortCode)
-                .shortUrl("http://localhost:8080/" + shortCode)
-                .clickCount(0L)
+                .shortCode(link.getShortCode())
+                .shortUrl("http://localhost:8080/" + link.getShortCode())
+                .clickCount(link.getClickCount())
                 .build();
+    }
+
+    @Override
+    public void redirect(String shortCode,
+                         HttpServletResponse response)
+            throws IOException {
+
+        Link link = linkRepository
+                .findByShortCodeAndActiveTrue(shortCode)
+                .orElseThrow(() -> new RuntimeException("Short URL not found"));
+
+        link.setClickCount(link.getClickCount() + 1);
+
+        linkRepository.save(link);
+
+        response.sendRedirect(link.getOriginalUrl());
     }
 }
