@@ -24,3 +24,12 @@ spring:
 
 server:
   port: 8080
+
+jwt:
+  secret: 7c3e6d2a4b8f1c5e9a0d6b3f8e1a4c7d9f2b5a8c1e6d3f9a7b4c2e8d1f6a9b3
+  expiration-ms: 86400000
+
+logging:
+  level:
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
