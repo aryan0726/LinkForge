@@ -22,7 +22,8 @@ function toLink(raw) {
   return {
     originalUrl: raw?.originalUrl ?? "",
     shortCode: raw?.shortCode ?? "",
-    // Rebuilt against the configured API origin; falls back to the server value.
+    // The server's value is authoritative (it may redirect from another host);
+    // see resolveShortUrl for why this is not rebuilt client-side.
     shortUrl: resolveShortUrl(raw),
     clickCount: Number(raw?.clickCount ?? 0),
   };

@@ -261,7 +261,7 @@ The app starts on <http://localhost:5173>.
 
 ### Verify it works
 
-**Backend tests** — 59 integration tests against a real PostgreSQL database:
+**Backend tests** — 62 integration tests against a real PostgreSQL database:
 
 ```bash
 cd linkforge-backend
@@ -278,8 +278,8 @@ you prefer not to use `linkforge_test`.
 
 ```bash
 cd frontend
-npm test              # lint + production build
-npm run test:contract # 33 live assertions against a running backend
+npm test              # lint + unit checks + production build
+npm run test:contract # 35 live assertions against a running backend
 ```
 
 `npm run test:contract` needs the backend running. It exercises the real API and

@@ -62,8 +62,9 @@ The app starts on <http://localhost:5173>.
 | `npm run build` | Produce a production bundle in `dist/` |
 | `npm run preview` | Serve the built bundle locally |
 | `npm run lint` | Run ESLint |
-| `npm test` | Lint plus a production build |
-| `npm run test:contract` | 33 live assertions against a running backend |
+| `npm test` | Lint, unit checks, then a production build |
+| `npm run test:unit` | Unit checks for `resolveShortUrl` (7 assertions) |
+| `npm run test:contract` | 35 live assertions against a running backend |
 
 ---
 
@@ -137,10 +138,16 @@ Two behaviours worth knowing:
 - **Registration returns a token**, so a new user is signed in immediately and
   dropped straight onto the dashboard.
 
-`shortUrl` is built by the backend from its configured `APP_BASE_URL`, so it can
-be trusted as-is. `resolveShortUrl` in `src/services/config.js` still reaffirms
-it against the configured API origin, which keeps links correct if the API and
-the short-link domain ever differ.
+`shortUrl` is built by the backend from its configured `APP_BASE_URL`, so it is
+authoritative and used as-is. `resolveShortUrl` in `src/services/config.js`
+returns the server value whenever it is present, and only derives a URL from
+`shortCode` as a fallback for a response that omits it.
+
+This ordering matters: the host that serves the redirect is not necessarily the
+host that serves the API. Deployed with `APP_BASE_URL=https://sho.rt` and an API
+at `https://api.example.com/api`, the link is `https://sho.rt/abc123`.
+Reconstructing it client-side from the API origin would produce
+`https://api.example.com/abc123`, where nothing redirects.
 
 ### Error handling
 
@@ -201,15 +208,16 @@ The contract is tested against a live backend rather than a mock, so backend
 drift fails loudly instead of silently.
 
 ```bash
-npm test                 # lint + production build
-npm run test:contract    # 33 assertions against a running backend
+npm test                 # lint + unit checks + production build
+npm run test:unit        # 7 unit assertions, no backend needed
+npm run test:contract    # 35 assertions against a running backend
 ```
 
 The backend's own suite is the primary safety net:
 
 ```bash
 cd ../linkforge-backend
-./mvnw test              # 59 integration tests, real PostgreSQL
+./mvnw test              # 62 integration tests, real PostgreSQL
 ```
 
 `npm run test:contract` requires the Spring Boot app on `:8080` and PostgreSQL
@@ -357,8 +365,9 @@ docker build --build-arg VITE_API_BASE_URL=https://api.example.com/api -t linkfo
 (`LinkServiceImpl`), so it is correct in whatever environment the API runs in —
 no client-side reconstruction is required.
 
-`src/services/config.js` still exports `resolveShortUrl()`, which prefers the
-authoritative `shortCode` and rebuilds the URL against the configured API origin.
-This is a deliberate belt-and-braces measure: it keeps links correct if the API
-and the short-link domain are ever different hosts, which is a common deployment
-shape — `api.example.com` serving the API while `sho.rt` serves the redirects.
+`src/services/config.js` exports `resolveShortUrl()`, which returns that server
+value whenever it is present and only derives a URL from `shortCode` when a
+response omits `shortUrl`. It deliberately does **not** rebuild the URL from the
+API origin: in the common deployment where `api.example.com` serves the API and
+`sho.rt` serves the redirects, such a rebuild would point at the API host, where
+nothing redirects. `verify-units.mjs` pins both branches.

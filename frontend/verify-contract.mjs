@@ -16,6 +16,13 @@
 
 const API = process.env.API_BASE_URL || "http://localhost:8080/api";
 
+// Imported, not mirrored. `config.js` is plain-Node importable (its
+// `import.meta.env` access is guarded), and this assertion guards the exact
+// client/server seam where a bug can hide: the backend can return a perfect
+// `shortUrl` while the client quietly replaces it. Asserting a copied version
+// of the logic would not catch that, so the real module is used.
+const { resolveShortUrl } = await import("./src/services/config.js");
+
 let passed = 0;
 let failed = 0;
 
@@ -158,6 +165,29 @@ async function run() {
     check("response carries a shortCode", typeof res.data?.shortCode === "string");
     check("response carries a shortUrl", typeof res.data?.shortUrl === "string");
     check("clickCount starts at 0", res.data?.clickCount === 0);
+
+    // The server builds shortUrl from its own APP_BASE_URL, and that host is
+    // what actually serves the redirect. Pinning the shape of the value (not
+    // just its type) is what stops a client-side "helpful" rewrite from
+    // silently pointing links at the API host instead. See config.js.
+    check(
+      "shortUrl is absolute and points at the short-link host, not the API",
+      typeof res.data?.shortUrl === "string" &&
+        /^https?:\/\//.test(res.data.shortUrl) &&
+        res.data.shortUrl.endsWith(`/${res.data.shortCode}`),
+      `got ${res.data?.shortUrl}`,
+    );
+
+    // The client must pass the server value through untouched. This is the
+    // seam where a client-side rebuild hides: the API is correct and the
+    // client mapping is "reasonable", so only asserting the mapping catches it.
+    // Uses the real function the UI ships, not a copy.
+    check(
+      "client mapping preserves the server shortUrl",
+      resolveShortUrl(res.data) === res.data?.shortUrl,
+      `client produced ${resolveShortUrl(res.data)}, server said ${res.data?.shortUrl}`,
+    );
+
     shortCode = res.data?.shortCode;
   }
 

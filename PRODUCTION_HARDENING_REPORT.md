@@ -14,8 +14,9 @@ functionality were preserved. Every change is additive or a targeted fix.
 | Backend tests | **62 tests, 0 failures, 0 errors** |
 | Backend package | **BUILD SUCCESS** |
 | Frontend lint | **PASS** (0 problems) |
-| Frontend build | **PASS** (135 modules, 406.74 kB JS / 121.80 kB gzip) |
-| Live contract check | **33 assertions, 0 failures** |
+| Frontend unit checks | **7 assertions, 0 failures** |
+| Frontend build | **PASS** (135 modules, 406.83 kB JS / 121.86 kB gzip) |
+| Live contract check | **35 assertions, 0 failures** |
 | Flyway on existing DB | **PASS** — 22 users / 19 links preserved |
 
 Verification was done against a real PostgreSQL 16 database, not a substitute.
@@ -73,18 +74,20 @@ Tests:
   test/resources/application-test.yaml
 ```
 
-### Frontend — modified (4)
+### Frontend — modified (5)
 
 | File | Change |
 | --- | --- |
 | `src/services/errors.js` | Rewritten — obsolete 403 workaround removed, `fieldErrors` parsing added. **Also fixed a syntax bug: a duplicated, unterminated JSDoc block.** |
 | `src/services/apiClient.js` | Only 401 triggers sign-out (was 401 + 403) |
 | `src/services/authService.js` | Removed the now-pointless `signals` guessing parameter |
-| `package.json` | Replaced stale test scripts; added `test:contract` |
+| `src/services/config.js` | `resolveShortUrl` now prefers the server value instead of overriding it (Issue 14); guarded `import.meta.env` so the module is testable under plain Node |
+| `package.json` | Replaced stale test scripts; added `test:contract` and `test:unit`; `npm test` now runs lint → unit → build |
 
-### Frontend — new (1)
+### Frontend — new (2)
 
-- `verify-contract.mjs` — 33 live assertions against a running backend
+- `verify-contract.mjs` — 35 live assertions against a running backend
+- `verify-units.mjs` — 7 unit assertions for `resolveShortUrl` (no backend needed)
 
 ### Removed
 
@@ -356,10 +359,50 @@ database constraints and both documented:
 Neither can produce corrupt data. A retry loop would eliminate both, but the
 current behaviour is honest and bounded.
 
-**No `APP_BASE_URL`-aware frontend rewrite was needed.** `resolveShortUrl` was
-kept as a belt-and-braces measure (it handles the case where the API and the
-short-link domain differ) rather than removed — removing working code is not a
-hardening win.
+### Issue 14 — the one frontend change a backend fix made *necessary*
+
+An earlier draft of this report claimed "no `APP_BASE_URL`-aware frontend
+rewrite was needed", and that `resolveShortUrl` was harmless belt-and-braces
+code. That was wrong, and testing it properly showed why.
+
+**The bug.** `resolveShortUrl` checked `shortCode` *before* `shortUrl`:
+
+```js
+if (link.shortCode) return `${API_ORIGIN}/${link.shortCode}`;   // wins
+return link.shortUrl || "";                                     // never reached
+```
+
+So it discarded the server's value on every response. That was written when the
+backend hardcoded `http://localhost:8080/` — at the time, rebuilding client-side
+genuinely was a fix. **Fixing the backend inverted the logic's value**: the
+override became actively harmful.
+
+**Why it matters.** The host serving the redirect is not necessarily the host
+serving the API. With the API at `https://api.example.com/api` and
+`APP_BASE_URL=https://sho.rt`:
+
+| | Result |
+| --- | --- |
+| Server returns | `https://sho.rt/pB4fJm` |
+| UI displayed (old) | `https://api.example.com/pB4fJm` — **nothing redirects here** |
+| UI displayed (fixed) | `https://sho.rt/pB4fJm` |
+
+**How it was missed.** The earlier `APP_BASE_URL=https://sho.rt` check inspected
+the backend's JSON only. It never rendered what the UI would show, so the value
+was correct in the API and wrong on screen. The 33 contract assertions also
+missed it: the only `shortUrl` assertion tests `typeof === "string"`, which the
+wrong URL satisfies. And it cannot reproduce locally, because in development the
+API host and the short-link host are both `localhost:8080`.
+
+**Fix.** Server value wins; the derived form is only a fallback when `shortUrl`
+is absent. `verify-units.mjs` pins all three branches, and was confirmed to
+**fail** against the old logic and pass against the new — a test that cannot
+fail proves nothing.
+
+**Lesson.** This is the same failure mode as Issue 13: both bugs lived in the
+seam between two components, where each side's tests were individually green. A
+backend assertion that the value is *correct* does not establish that the client
+*uses* it.
 
 ---
 
