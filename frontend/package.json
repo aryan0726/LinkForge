@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:contract": "node verify-contract.mjs",
+    "test": "npm run lint && npm run build"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.1",

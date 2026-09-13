@@ -1,82 +1,83 @@
-import {
-  FaLink,
-  FaMousePointer,
-  FaGlobe,
-  FaChartLine,
-} from "react-icons/fa";
+import { FiLink2, FiMousePointer, FiTrendingUp, FiActivity } from "react-icons/fi";
+import { formatNumber } from "../../utils/format";
 
-function StatsCards() {
-  const stats = [
+/**
+ * Dashboard statistic cards.
+ *
+ * Every value is computed from the real GET /api/links response. There are no
+ * percentage-change figures because the API returns no historical time series to
+ * compare against.
+ */
+export default function StatsCards({ stats }) {
+  const { totalLinks, totalClicks, clickedLinks, neverClicked, averageClicks } =
+    stats;
+
+  const cards = [
     {
-      title: "Total Links",
-      value: "128",
-      change: "+12.4%",
-      icon: <FaLink />,
+      key: "links",
+      label: "Total links",
+      value: formatNumber(totalLinks),
+      caption: totalLinks === 0 ? "No links yet" : "In your library",
+      icon: FiLink2,
+      tone: "from-brand-500 to-accent-600",
     },
     {
-      title: "Total Clicks",
-      value: "12,847",
-      change: "+24.5%",
-      icon: <FaMousePointer />,
+      key: "clicks",
+      label: "Total clicks",
+      value: formatNumber(totalClicks),
+      caption: totalClicks === 0 ? "No visits recorded" : "Across all links",
+      icon: FiMousePointer,
+      tone: "from-violet-500 to-fuchsia-500",
     },
     {
-      title: "Countries",
-      value: "150",
-      change: "+8.7%",
-      icon: <FaGlobe />,
+      key: "avg",
+      label: "Avg. clicks / link",
+      value: averageClicks < 10 ? averageClicks.toFixed(1) : formatNumber(Math.round(averageClicks)),
+      caption: totalLinks === 0 ? "—" : "Mean per link",
+      icon: FiTrendingUp,
+      tone: "from-sky-500 to-indigo-600",
     },
     {
-      title: "Growth Rate",
-      value: "+24.5%",
-      change: "+3.2%",
-      icon: <FaChartLine />,
+      key: "active",
+      label: "Links with clicks",
+      value: formatNumber(clickedLinks),
+      caption:
+        neverClicked === 0
+          ? "Every link has been visited"
+          : `${formatNumber(neverClicked)} never clicked`,
+      icon: FiActivity,
+      tone: "from-emerald-500 to-teal-600",
     },
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-6">
-      {stats.map((stat, index) => (
-        <div
-          key={index}
-          className="bg-white
-border
-border-gray-200
-rounded-2xl
-p-6
-shadow-sm
-hover:shadow-lg
-hover:-translate-y-1
-transition-all
-duration-300
-"
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {cards.map((card) => (
+        <article
+          key={card.key}
+          className="group rounded-2xl border border-ink-200/80 bg-white p-5 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift"
         >
-          {/* Icon */}
-
-          <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-500 text-xl mb-4">
-            {stat.icon}
+          <div className="flex items-start justify-between">
+            <span
+              className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${card.tone} text-white shadow-[0_8px_18px_-10px_rgba(15,23,42,0.5)]`}
+            >
+              <card.icon size={17} aria-hidden="true" />
+            </span>
           </div>
 
-          {/* Title */}
-
-          <h3 className="text-gray-500 text-sm">
-            {stat.title}
-          </h3>
-
-          {/* Value */}
-
-          <p className="text-4xl font-bold mt-2">
-            {stat.value}
+          <p className="mt-4 text-[11.5px] font-bold uppercase tracking-[0.1em] text-ink-400">
+            {card.label}
           </p>
 
-          {/* Growth */}
-
-          <p className="text-green-600 text-sm font-medium mt-3">
-            ↑ {stat.change} from last week
+          <p className="mt-1.5 text-[28px] font-extrabold leading-none tracking-tight text-ink-900">
+            {card.value}
           </p>
-        </div>
+
+          <p className="mt-2.5 truncate text-[12.5px] text-ink-500">
+            {card.caption}
+          </p>
+        </article>
       ))}
     </div>
   );
 }
-
-export default StatsCards;

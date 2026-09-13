@@ -1,0 +1,17 @@
+import { useContext } from "react";
+import { ToastContext } from "../context/toastContextObject";
+
+/**
+ * Access the toast API from anywhere below <ToastProvider>.
+ *
+ * `toast.success(title, description)`, `.error(...)`, `.info(...)`, `.dismiss(id)`
+ */
+export function useToast() {
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error("useToast must be used inside a <ToastProvider>");
+  }
+  return context;
+}
+
+export default useToast;
