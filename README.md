@@ -507,7 +507,8 @@ Confirmed in the running container:
 | SPA deep routes (`/dashboard`, `/links`, `/settings`, unknown paths) | all `200` (fallback works — no 404 on hard refresh) |
 | API reverse proxy (`/api/*`) | reaches Spring Boot; returns its JSON, not nginx HTML |
 | Register → login → `GET /api/user/me` through the proxy | `200` with a valid JWT |
-| gzip on the JS bundle | 406,744 → 121,803 bytes (**70% smaller**) |
+| Short-link redirect (`/{shortCode}`) through the proxy | `302` to the original URL (not swallowed by SPA fallback) |
+| gzip on the JS bundle | 406,870 → 121,870 bytes (**70% smaller**) |
 | Hashed assets | `Cache-Control: max-age=31536000, immutable` |
 | `index.html` | `no-cache, no-store, must-revalidate` |
 | Container healthcheck | `healthy` |

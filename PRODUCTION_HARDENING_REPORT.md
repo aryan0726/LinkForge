@@ -15,7 +15,7 @@ functionality were preserved. Every change is additive or a targeted fix.
 | Backend package | **BUILD SUCCESS** |
 | Frontend lint | **PASS** (0 problems) |
 | Frontend unit checks | **7 assertions, 0 failures** |
-| Frontend build | **PASS** (135 modules, 406.83 kB JS / 121.86 kB gzip) |
+| Frontend build | **PASS** (135 modules, 406.87 kB JS / 121.87 kB gzip) |
 | Live contract check | **35 assertions, 0 failures** |
 | Flyway on existing DB | **PASS** — 22 users / 19 links preserved |
 
@@ -403,6 +403,57 @@ fail proves nothing.
 seam between two components, where each side's tests were individually green. A
 backend assertion that the value is *correct* does not establish that the client
 *uses* it.
+
+### Issue 15 — nginx SPA fallback swallowed short-link redirects
+
+**The bug.** The nginx config proxied `/api/**` to the backend but left
+`/{shortCode}` to the SPA fallback:
+
+```nginx
+location / {
+    try_files $uri $uri/ /index.html;   # <-- short codes land here
+}
+```
+
+A request for `/abc123` therefore served `index.html` instead of reaching Spring
+Boot's `RedirectController`. Short links were **completely broken** in the
+documented container deployment.
+
+**Why it was missed.** The contract tests call the backend directly on port
+8080, bypassing nginx. The README's container verification table did not list
+redirect checks — the assumption was that if `/api/**` proxies worked, everything
+else would too.
+
+**Fix.** `frontend/nginx.conf` — try the backend first for root-level paths,
+and fall back to `index.html` only when the backend returns 404:
+
+```nginx
+location / {
+    try_files $uri $uri/ @backend;
+}
+
+location @backend {
+    proxy_pass http://backend:8080;
+    proxy_intercept_errors on;
+    error_page 404 = /index.html;
+    ...
+}
+```
+
+- `/assets/**` and `/api/**` still hit their dedicated locations.
+- Valid short codes → backend 302 → browser redirect.
+- Unknown codes → backend 404 → nginx serves `index.html` (SPA 404 page).
+- SPA routes (`/login`, `/dashboard`, etc.) → backend 404 → same fallback.
+- API 404s are safe: `/api/**` has its own location, so `proxy_intercept_errors`
+  in `@backend` never touches them.
+
+**Verified after rebuild:**
+
+| Request | Before | After |
+| --- | --- | --- |
+| `GET /6XWIaK` through proxy | 200 + `index.html` | **302** → original URL |
+| `GET /login` through proxy | 200 + `index.html` | 200 + `index.html` (unchanged) |
+| `GET /unknown-path` through proxy | 200 + `index.html` | 200 + `index.html` (unchanged) |
 
 ---
 
