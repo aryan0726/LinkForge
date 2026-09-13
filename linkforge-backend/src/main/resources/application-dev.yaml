@@ -1,0 +1,21 @@
+# Development profile — activate with: --spring.profiles.active=dev
+#
+# This file contains only *local* defaults so a fresh clone runs without any
+# setup. None of these values may be used in production: the JWT secret below is
+# public (it is committed to this repository) and therefore offers no security.
+spring:
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    com.linkforge: DEBUG
+    org.hibernate.SQL: DEBUG
+
+jwt:
+  # Development-only secret. Generate a real one for production with:
+  #   openssl rand -base64 48
+  secret: ${JWT_SECRET:dev-only-insecure-secret-do-not-use-in-production-0123456789}
+
+app:
+  base-url: ${APP_BASE_URL:http://localhost:8080}

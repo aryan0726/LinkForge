@@ -1,0 +1,57 @@
+# Test configuration
+#
+# The tests are deliberately NOT run against an in-memory database such as H2.
+# The schema is owned by Flyway migrations written in PostgreSQL dialect
+# (`UUID`, `TIMESTAMP(6) WITHOUT TIME ZONE`, `CHECK` constraints), and H2 would
+# either reject them or quietly accept a subtly different schema — meaning the
+# tests could pass while the real deployment fails to start.
+#
+# Instead the suite runs against PostgreSQL. Point TEST_DB_* at any throwaway
+# database. With Docker:
+#
+#   docker run -d --name linkforge-pg-test \
+#     -e POSTGRES_DB=linkforge_test \
+#     -e POSTGRES_USER=postgres \
+#     -e POSTGRES_PASSWORD=postgres \
+#     -p 5434:5432 postgres:16-alpine
+#
+# The default below matches the developer database used elsewhere in this repo
+# so `mvn test` works out of the box, but it is overridable.
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5433/linkforge_test}
+    username: ${TEST_DB_USERNAME:postgres}
+    password: ${TEST_DB_PASSWORD:postgres}
+
+  jpa:
+    hibernate:
+      # Identical to production: the tests must fail if the migrations and the
+      # entities disagree, not silently create a schema that happens to work.
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    # Each test run starts from an empty database, so the migrations are applied
+    # from scratch every time. This is what proves the migration set is
+    # sufficient to build a working schema on its own.
+    clean-disabled: false
+
+server:
+  port: 0
+
+# A fixed, obviously-fake secret keeps token assertions deterministic. It is
+# only ever used in tests and has no value outside them.
+jwt:
+  secret: test-only-secret-0123456789-abcdefghijklmnopqrstuvwxyz
+  expiration-ms: 3600000
+
+app:
+  base-url: http://test.linkforge.local
+  cors:
+    allowed-origins: http://localhost:5173
+
+logging:
+  level:
+    root: WARN
+    com.linkforge: INFO
+    org.hibernate.SQL: WARN
