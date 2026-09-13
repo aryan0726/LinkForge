@@ -4,6 +4,19 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+### Secrets ###
+# Real credentials must never be committed. `.env.example` is the committed
+# template; `.env` and any local overrides stay local.
+.env
+.env.local
+.env.*.local
+*.pem
+*.p12
+*.jks
+application-local.yaml
+application-local.yml
+application-local.properties
+
 ### STS ###
 .apt_generated
 .classpath
